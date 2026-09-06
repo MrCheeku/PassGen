@@ -3,7 +3,7 @@
 <img src="assets/header.svg" alt="PassGen — modern password generator and local password vault" width="100%" />
 
 <p>
-  <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/stars/MrCheeku/PassGen?style=for-the-badge&label=STARS&cacheSeconds=60&v=1" alt="GitHub stars" /></a>
+  <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/stars/MrCheeku/PassGen?style=for-the-badge&label=STARS&cacheSeconds=60&v=0" alt="GitHub stars" /></a>
   <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/last-commit/MrCheeku/PassGen?style=for-the-badge&label=UPDATED" alt="Last commit" /></a>
   <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/repo-size/MrCheeku/PassGen?style=for-the-badge&label=SIZE" alt="Repository size" /></a>
 </p>
@@ -306,4 +306,4 @@ The encrypted payload is generated from vault data and a user-supplied export pa
 
 </div>
 
-<!-- LIVE_STARS: 1 | automatically synced 2026-09-06T15:14:17.606Z -->
+<!-- LIVE_STARS: 0 | automatically synced 2026-09-06T17:36:45.220Z -->
