@@ -3,9 +3,9 @@
 <img src="assets/header.svg" alt="PassGen — modern password generator and local password vault" width="100%" />
 
 <p>
-  <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/stars/MrCheeku/PassGen?style=for-the-badge&label=STARS" alt="GitHub stars" /></a>
-  <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/last-commit/MrCheeku/PassGen?style=for-the-badge&label=UPDATED" alt="Last commit" /></a>
-  <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/repo-size/MrCheeku/PassGen?style=for-the-badge&label=SIZE" alt="Repository size" /></a>
+  <a href="https://github.com/MrCheeku/PassGen-Clean"><img src="https://img.shields.io/github/stars/MrCheeku/PassGen-Clean?style=for-the-badge&label=STARS" alt="GitHub stars" /></a>
+  <a href="https://github.com/MrCheeku/PassGen-Clean"><img src="https://img.shields.io/github/last-commit/MrCheeku/PassGen-Clean?style=for-the-badge&label=UPDATED" alt="Last commit" /></a>
+  <a href="https://github.com/MrCheeku/PassGen-Clean"><img src="https://img.shields.io/github/repo-size/MrCheeku/PassGen-Clean?style=for-the-badge&label=SIZE" alt="Repository size" /></a>
 </p>
 
 <p><strong>Strong password generation • Local vault storage • Encrypted backups</strong></p>
@@ -215,8 +215,8 @@ This README describes the implementation currently present in the repository; it
 ### Clone with HTTPS
 
 ```bash
-git clone https://github.com/MrCheeku/PassGen.git
-cd PassGen
+git clone https://github.com/MrCheeku/PassGen-Clean.git
+cd PassGen-Clean
 gradle assembleDebug
 ```
 
@@ -225,8 +225,8 @@ gradle assembleDebug
 SSH is useful when you regularly clone, pull, or push from your development machine. GitHub uses your SSH key pair for authentication; **keep the private key private** and only add the public key to your GitHub account.
 
 ```bash
-git clone git@github.com:MrCheeku/PassGen.git
-cd PassGen
+git clone git@github.com:MrCheeku/PassGen-Clean.git
+cd PassGen-Clean
 gradle assembleDebug
 ```
 
@@ -284,9 +284,9 @@ The encrypted payload is generated from vault data and a user-supplied export pa
 
 <div align="center">
 
-<a href="https://github.com/MrCheeku/PassGen/issues">Report an issue</a>
+<a href="https://github.com/MrCheeku/PassGen-Clean/issues">Report an issue</a>
 &nbsp;•&nbsp;
-<a href="https://github.com/MrCheeku/PassGen">View source</a>
+<a href="https://github.com/MrCheeku/PassGen-Clean">View source</a>
 &nbsp;•&nbsp;
 <a href="https://github.com/MrCheeku">Developer profile</a>
 
