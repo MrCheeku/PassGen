@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" width="1200" height="280" role="img" aria-labelledby="title desc">
+  <title id="title">PassGen</title>
+  <desc id="desc">Modern password generator and local password vault</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070b12"/>
+      <stop offset="0.55" stop-color="#0d1624"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="280" rx="28" fill="url(#bg)"/>
+  <g opacity="0.35" fill="none" stroke="#334155">
+    <path d="M0 220 C220 110 390 300 610 165 S1010 50 1200 140"/>
+    <path d="M0 246 C220 136 400 326 620 190 S1000 78 1200 165"/>
+  </g>
+  <circle cx="1020" cy="70" r="95" fill="#67e8f9" opacity="0.08" filter="url(#glow)">
+    <animate attributeName="opacity" values="0.05;0.12;0.05" dur="4.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="1080" cy="205" r="110" fill="#a78bfa" opacity="0.07" filter="url(#glow)">
+    <animate attributeName="opacity" values="0.04;0.10;0.04" dur="5.5s" repeatCount="indefinite"/>
+  </circle>
+  <g transform="translate(95 72)">
+    <rect x="0" y="0" width="74" height="86" rx="18" fill="#111827" stroke="#334155"/>
+    <path d="M37 17 57 25v17c0 19-9 32-20 37-11-5-20-18-20-37V25z" fill="none" stroke="url(#accent)" stroke-width="4"/>
+    <path d="M29 42h16" stroke="#67e8f9" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="37" cy="42" r="5" fill="#a78bfa"><animate attributeName="r" values="4;6;4" dur="2.2s" repeatCount="indefinite"/></circle>
+  </g>
+  <text x="205" y="106" fill="#f8fafc" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="58" font-weight="800" letter-spacing="-1">PassGen</text>
+  <text x="208" y="148" fill="#94a3b8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21">Private credentials. Strong passwords. Local-first security.</text>
+  <rect x="208" y="178" width="280" height="38" rx="19" fill="#0f172a" stroke="#334155"/>
+  <text x="348" y="203" text-anchor="middle" fill="#cbd5e1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="700">ENGINEERED BY MR.CHEEKU</text>
+  <g transform="translate(900 98)" opacity="0.9">
+    <rect x="0" y="0" width="120" height="74" rx="18" fill="#0b1220" stroke="#263449"/>
+    <path d="M22 26h76M22 37h52M22 48h64" stroke="#64748b" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="92" cy="50" r="6" fill="#67e8f9"/>
+  </g>
+</svg>

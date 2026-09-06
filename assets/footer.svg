@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 150" width="1200" height="150" role="img" aria-labelledby="title desc">
+  <title id="title">PassGen footer</title>
+  <desc id="desc">Encrypted locally. Engineered by Mr.Cheeku.</desc>
+  <defs>
+    <linearGradient id="line" x1="0" x2="1"><stop offset="0" stop-color="#67e8f9" stop-opacity="0"/><stop offset="0.5" stop-color="#a78bfa"/><stop offset="1" stop-color="#67e8f9" stop-opacity="0"/></linearGradient>
+    <radialGradient id="halo"><stop offset="0" stop-color="#67e8f9" stop-opacity="0.18"/><stop offset="1" stop-color="#67e8f9" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1200" height="150" rx="26" fill="#080d16"/>
+  <ellipse cx="600" cy="58" rx="250" ry="70" fill="url(#halo)"/>
+  <rect x="120" y="32" width="960" height="2" fill="url(#line)"/>
+  <text x="600" y="82" text-anchor="middle" fill="#e2e8f0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="700">PASSGEN • LOCAL-FIRST PASSWORD SECURITY</text>
+  <text x="600" y="112" text-anchor="middle" fill="#64748b" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">Engineered by Mr.Cheeku</text>
+</svg>
