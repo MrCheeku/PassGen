@@ -272,6 +272,8 @@ The encrypted payload is generated from vault data and a user-supplied export pa
 
 <a href="https://whatsapp.com/channel/0029Vb9OpwgD8SDvISwrn73Y"><img src="https://img.shields.io/badge/Join%20WhatsApp%20Channel-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Join Tech with Cheeku WhatsApp channel" /></a>
 
+<a href="https://discord.gg/GWJvzcxuN"><img src="https://img.shields.io/badge/Join%20My%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join My Discord" /></a>
+
 </div>
 
 ---
@@ -285,10 +287,6 @@ The encrypted payload is generated from vault data and a user-supplied export pa
 ### **Mr.Cheeku**
 
 <a href="https://github.com/MrCheeku"><img src="https://img.shields.io/badge/Visit%20Developer%20Profile-↗-111827?style=for-the-badge&logo=github&logoColor=white" alt="Visit Mr.Cheeku's GitHub profile" /></a>
-
-<br /><br />
-
-<a href="https://discord.gg/GWJvzcxuN"><img src="https://img.shields.io/badge/Join%20My%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join My Discord" /></a>
 
 </div>
 
