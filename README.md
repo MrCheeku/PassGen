@@ -43,6 +43,16 @@ Generate → Review Strength → Save Credential → Lock Vault → Export Encry
 
 PassGen's UI is built from focused Jetpack Compose screens and reusable components, including dashboard, generator, master-lock, settings, credential cards, password-strength UI, and add/edit flows.
 
+
+## 🎬 Animated Password Flow
+
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/besttoolsforever/CipherSmith/main/CipherSmith.gif" alt="Animated password generator demonstration" width="900" />
+
+<sub>Animation reference: <a href="https://github.com/besttoolsforever/CipherSmith">CipherSmith</a></sub>
+
+</div>
 ---
 
 ## 🧰 Tech Stack
