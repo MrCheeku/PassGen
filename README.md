@@ -52,6 +52,8 @@ PassGen's UI is built from focused Jetpack Compose screens and reusable componen
 
 <sub>Animation reference: <a href="https://github.com/besttoolsforever/CipherSmith">CipherSmith</a></sub>
 
+> 🎥 **Demo video only:** this animation is a small visual preview to give you an idea of the concept. The actual **PassGen** experience is much larger, with its own polished password dashboard, dedicated generator and vault screens, security-focused UI, modern theme, password-strength experience, and complete local-first workflow.
+
 </div>
 ---
 
