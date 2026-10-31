@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Vault ciphertext and its local key must never be backed up separately. -->
-    <exclude domain="database" path="passgen_vault.db" />
+    <!-- This app stores a local vault and its local encryption key. Do not back either up. -->
+    <exclude domain="database" path="." />
     <exclude domain="sharedpref" path="passgen_vault_security.xml" />
 </full-backup-content>
