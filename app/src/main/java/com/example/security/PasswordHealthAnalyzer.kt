@@ -14,7 +14,11 @@ data class PasswordHealthReport(
     val needingAttentionCount: Int,
     val summaryLabel: String,
     val summaryColor: Color,
-    val overallScore: Int = if (totalCount > 0) ((strongCount.toFloat() / totalCount) * 100).toInt() else 100
+    val overallScore: Int = if (totalCount > 0) {
+        (((totalCount - needingAttentionCount).coerceAtLeast(0).toFloat() / totalCount) * 100).toInt()
+    } else {
+        100
+    }
 )
 
 object PasswordHealthAnalyzer {
