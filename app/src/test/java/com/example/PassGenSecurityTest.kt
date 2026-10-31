@@ -41,6 +41,51 @@ class PassGenSecurityTest {
     }
 
     @Test
+    fun `generator rejects impossible lengths and guarantees only selected groups`() {
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            PasswordGenerator.generate(PasswordGenerator.GeneratorOptions(length = 5))
+        }
+
+        val digitsOnly = PasswordGenerator.generate(
+            PasswordGenerator.GeneratorOptions(
+                length = 12,
+                includeUppercase = false,
+                includeLowercase = false,
+                includeNumbers = true,
+                includeSymbols = false
+            )
+        )
+        assertEquals(12, digitsOnly.length)
+        assertTrue(digitsOnly.all { it.isDigit() })
+
+        val fallback = PasswordGenerator.generate(
+            PasswordGenerator.GeneratorOptions(
+                length = 12,
+                includeUppercase = false,
+                includeLowercase = false,
+                includeNumbers = false,
+                includeSymbols = false
+            )
+        )
+        assertEquals(12, fallback.length)
+        assertTrue(fallback.all { it.isLowerCase() || it.isDigit() })
+    }
+
+    @Test
+    fun `strength calculator penalizes repeated sequential and common patterns`() {
+        val randomLike = PasswordStrengthCalculator.calculate("mP9!vX2@qL7#zR5&")
+        val repeated = PasswordStrengthCalculator.calculate("AAAAaaaa1111!!!!")
+        val sequential = PasswordStrengthCalculator.calculate("Abcd1234!XYZ")
+        val common = PasswordStrengthCalculator.calculate("Password!23456789")
+
+        assertTrue(randomLike.score > repeated.score)
+        assertTrue(randomLike.score > sequential.score)
+        assertTrue(common.score <= 1)
+        assertTrue(repeated.feedback.isNotEmpty())
+        assertTrue(sequential.feedback.isNotEmpty())
+    }
+
+    @Test
     fun `test password generator numbers only`() {
         val options = PasswordGenerator.GeneratorOptions(
             length = 8,
