@@ -49,8 +49,11 @@ object PasswordHealthAnalyzer {
         // Count password occurrences to detect reused passwords
         val passwordCounts = mutableMapOf<String, Int>()
         for (item in items) {
-            val count = passwordCounts.getOrDefault(item.password, 0)
-            passwordCounts[item.password] = count + 1
+            // An empty password is a missing/weak value, not reuse of a credential.
+            if (item.password.isNotEmpty()) {
+                val count = passwordCounts.getOrDefault(item.password, 0)
+                passwordCounts[item.password] = count + 1
+            }
         }
 
         var reused = 0
@@ -71,7 +74,7 @@ object PasswordHealthAnalyzer {
                 itemHasIssue = true
             }
 
-            if ((passwordCounts[item.password] ?: 0) > 1) {
+            if (item.password.isNotEmpty() && (passwordCounts[item.password] ?: 0) > 1) {
                 reused++
                 itemHasIssue = true
             }
