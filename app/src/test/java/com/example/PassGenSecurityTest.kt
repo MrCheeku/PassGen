@@ -147,6 +147,14 @@ class PassGenSecurityTest {
         assertEquals(2, report.shortCount)
         assertEquals(2, report.reusedCount) // 2 items share "123"
         assertEquals(2, report.needingAttentionCount)
+        assertEquals(33, report.overallScore)
+    }
+
+    @Test
+    fun `empty vault has a neutral health score`() {
+        val report = PasswordHealthAnalyzer.analyze(emptyList())
+        assertEquals(0, report.totalCount)
+        assertEquals(100, report.overallScore)
     }
 
     @Test
