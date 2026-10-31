@@ -27,11 +27,11 @@
 | **Password Generator** | Generates passwords from uppercase, lowercase, numbers, and symbols with configurable length from 6–64 characters. |
 | **Password Vault** | Stores credential records including title, username, password, website, notes, favorites, and timestamps. |
 | **Master Lock** | Supports an app-level PIN lock with salted PBKDF2-HMAC-SHA256 verification. |
-| **At-Rest Encryption** | Uses AES-256-GCM for sensitive vault fields and Android Keystore-backed key material when available. |
+| **At-Rest Encryption** | Uses versioned AES-256-GCM ciphertext for sensitive vault fields, preferring Android Keystore-backed key material when available. |
 | **Encrypted Backups** | Exports and imports the vault through an encrypted JSON envelope protected by a user-supplied password. |
 | **Theme Support** | Includes persisted system, dark, and light theme preferences. |
 
-> **Security note:** the current implementation includes a fallback local key path for environments where Android Keystore is unavailable. Review that behavior carefully before treating the project as a production security product.
+> **Security note:** if Android Keystore is unavailable, the compatibility fallback stores a random AES key in app-private preferences. This is not equivalent to hardware-backed key protection. New vault writes use a `v1:` ciphertext prefix and fail closed when encryption fails; legacy unversioned entries remain readable for compatibility. The local vault database and key preferences are excluded from Android cloud backup and device transfer so the two are not restored separately. This project has not undergone an independent security audit.
 
 ---
 
