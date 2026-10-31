@@ -158,6 +158,20 @@ class PassGenSecurityTest {
     }
 
     @Test
+    fun `empty passwords are weak but are not counted as reused`() {
+        val items = listOf(
+            VaultItem(id = 10, title = "Missing one", username = "one", password = "", website = "one.test"),
+            VaultItem(id = 11, title = "Missing two", username = "two", password = "", website = "two.test")
+        )
+
+        val report = PasswordHealthAnalyzer.analyze(items)
+        assertEquals(2, report.weakCount)
+        assertEquals(0, report.reusedCount)
+        assertEquals(2, report.needingAttentionCount)
+        assertEquals(0, report.overallScore)
+    }
+
+    @Test
     fun `test vault security manager encryption at rest`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val security = VaultSecurityManager(context)
