@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Keep encrypted vault data and its device-local key out of cloud backups. -->
-        <exclude domain="database" path="passgen_vault.db" />
+        <!-- Keep local vault data and its local encryption key on the originating device. -->
+        <exclude domain="database" path="." />
         <exclude domain="sharedpref" path="passgen_vault_security.xml" />
     </cloud-backup>
     <device-transfer>
-        <!-- Do not transfer device-bound key material with vault ciphertext. -->
-        <exclude domain="database" path="passgen_vault.db" />
+        <!-- The vault database and key preferences must not be restored separately. -->
+        <exclude domain="database" path="." />
         <exclude domain="sharedpref" path="passgen_vault_security.xml" />
     </device-transfer>
 </data-extraction-rules>
