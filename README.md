@@ -27,11 +27,11 @@
 | **Password Generator** | Generates passwords from uppercase, lowercase, numbers, and symbols with configurable length from 6–64 characters. |
 | **Password Vault** | Stores credential records including title, username, password, website, notes, favorites, and timestamps. |
 | **Master Lock** | Supports an app-level PIN lock with salted PBKDF2-HMAC-SHA256 verification. |
-| **At-Rest Encryption** | Uses AES-256-GCM for sensitive vault fields and Android Keystore-backed key material when available. |
+| **At-Rest Encryption** | Uses versioned AES-256-GCM ciphertext for sensitive vault fields, preferring Android Keystore-backed key material when available. |
 | **Encrypted Backups** | Exports and imports the vault through an encrypted JSON envelope protected by a user-supplied password. |
 | **Theme Support** | Includes persisted system, dark, and light theme preferences. |
 
-> **Security note:** the current implementation includes a fallback local key path for environments where Android Keystore is unavailable. Review that behavior carefully before treating the project as a production security product.
+> **Security note:** if Android Keystore is unavailable, the compatibility fallback stores a random AES key in app-private preferences. This is not equivalent to hardware-backed key protection. New vault writes use a `v1:` ciphertext prefix and fail closed when encryption fails; legacy unversioned entries remain readable for compatibility. The local vault database and key preferences are excluded from Android cloud backup and device transfer so the two are not restored separately. This project has not undergone an independent security audit.
 
 ---
 
@@ -268,7 +268,7 @@ The encrypted payload is generated from vault data and a user-supplied export pa
 
 <div align="center">
 
-<a href="https://techwithcheeku.lovable.app/"><img src="https://img.shields.io/badge/Visit%20Tech%20with%20Cheeku-Website-7c3aed?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Visit Tech with Cheeku website" /></a>
+<a href="https://TechWithCheeku.app"><img src="https://img.shields.io/badge/Visit%20Tech%20with%20Cheeku-Website-7c3aed?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Visit Tech with Cheeku website" /></a>
 
 <a href="https://whatsapp.com/channel/0029Vb9OpwgD8SDvISwrn73Y"><img src="https://img.shields.io/badge/Join%20WhatsApp%20Channel-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Join Tech with Cheeku WhatsApp channel" /></a>
 

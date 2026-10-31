@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -37,6 +38,51 @@ class PassGenSecurityTest {
         assertTrue(password.any { it.isLowerCase() })
         assertTrue(password.any { it.isDigit() })
         assertTrue(password.any { "!@#$%^&*()-_=+[]{}|;:,.<>?".contains(it) })
+    }
+
+    @Test
+    fun `generator rejects impossible lengths and guarantees only selected groups`() {
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            PasswordGenerator.generate(PasswordGenerator.GeneratorOptions(length = 5))
+        }
+
+        val digitsOnly = PasswordGenerator.generate(
+            PasswordGenerator.GeneratorOptions(
+                length = 12,
+                includeUppercase = false,
+                includeLowercase = false,
+                includeNumbers = true,
+                includeSymbols = false
+            )
+        )
+        assertEquals(12, digitsOnly.length)
+        assertTrue(digitsOnly.all { it.isDigit() })
+
+        val fallback = PasswordGenerator.generate(
+            PasswordGenerator.GeneratorOptions(
+                length = 12,
+                includeUppercase = false,
+                includeLowercase = false,
+                includeNumbers = false,
+                includeSymbols = false
+            )
+        )
+        assertEquals(12, fallback.length)
+        assertTrue(fallback.all { it.isLowerCase() || it.isDigit() })
+    }
+
+    @Test
+    fun `strength calculator penalizes repeated sequential and common patterns`() {
+        val randomLike = PasswordStrengthCalculator.calculate("mP9!vX2@qL7#zR5&")
+        val repeated = PasswordStrengthCalculator.calculate("AAAAaaaa1111!!!!")
+        val sequential = PasswordStrengthCalculator.calculate("Abcd1234!XYZ")
+        val common = PasswordStrengthCalculator.calculate("Password!23456789")
+
+        assertTrue(randomLike.score > repeated.score)
+        assertTrue(randomLike.score > sequential.score)
+        assertTrue(common.score <= 1)
+        assertTrue(repeated.feedback.isNotEmpty())
+        assertTrue(sequential.feedback.isNotEmpty())
     }
 
     @Test
@@ -101,6 +147,28 @@ class PassGenSecurityTest {
         assertEquals(2, report.shortCount)
         assertEquals(2, report.reusedCount) // 2 items share "123"
         assertEquals(2, report.needingAttentionCount)
+        assertEquals(33, report.overallScore)
+    }
+
+    @Test
+    fun `empty vault has a neutral health score`() {
+        val report = PasswordHealthAnalyzer.analyze(emptyList())
+        assertEquals(0, report.totalCount)
+        assertEquals(100, report.overallScore)
+    }
+
+    @Test
+    fun `empty passwords are weak but are not counted as reused`() {
+        val items = listOf(
+            VaultItem(id = 10, title = "Missing one", username = "one", password = "", website = "one.test"),
+            VaultItem(id = 11, title = "Missing two", username = "two", password = "", website = "two.test")
+        )
+
+        val report = PasswordHealthAnalyzer.analyze(items)
+        assertEquals(2, report.weakCount)
+        assertEquals(0, report.reusedCount)
+        assertEquals(2, report.needingAttentionCount)
+        assertEquals(0, report.overallScore)
     }
 
     @Test
@@ -112,8 +180,31 @@ class PassGenSecurityTest {
         val encrypted = security.encryptAtRest(originalSecret)
 
         assertNotEquals(originalSecret, encrypted)
+        assertTrue(encrypted.startsWith("v1:"))
         val decrypted = security.decryptAtRest(encrypted)
         assertEquals(originalSecret, decrypted)
+    }
+
+    @Test
+    fun `versioned vault ciphertext fails closed when corrupted`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+        val encrypted = security.encryptAtRest("vault-secret-to-protect")
+        val corrupted = encrypted.dropLast(2) + "xx"
+
+        try {
+            security.decryptAtRest(corrupted)
+            throw AssertionError("Corrupted versioned ciphertext must not be returned as plaintext.")
+        } catch (expected: IllegalStateException) {
+            assertTrue(expected.message!!.contains("Unable to decrypt"))
+        }
+    }
+
+    @Test
+    fun `legacy plaintext fallback values remain readable`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+        assertEquals("legacy-plain-value", security.decryptAtRest("legacy-plain-value"))
     }
 
     @Test

@@ -308,7 +308,15 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 isFavorite = isFavorite,
                 updatedAt = System.currentTimeMillis()
             )
-            repository.saveItem(item)
+            try {
+                repository.saveItem(item)
+            } catch (_: Exception) {
+                // Keep the editor open and never expose sensitive values or crypto details in UI.
+                _uiState.update {
+                    it.copy(statusMessage = "Could not securely save this credential. Your vault was not changed.")
+                }
+                return@launch
+            }
             _uiState.update {
                 it.copy(
                     isAddEditSheetOpen = false,
@@ -321,7 +329,13 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite(item: VaultItem) {
         viewModelScope.launch {
-            repository.toggleFavorite(item)
+            try {
+                repository.toggleFavorite(item)
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(statusMessage = "Could not securely update this credential. Your vault was not changed.")
+                }
+            }
         }
     }
 
