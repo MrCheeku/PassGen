@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -112,8 +113,31 @@ class PassGenSecurityTest {
         val encrypted = security.encryptAtRest(originalSecret)
 
         assertNotEquals(originalSecret, encrypted)
+        assertTrue(encrypted.startsWith("v1:"))
         val decrypted = security.decryptAtRest(encrypted)
         assertEquals(originalSecret, decrypted)
+    }
+
+    @Test
+    fun `versioned vault ciphertext fails closed when corrupted`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+        val encrypted = security.encryptAtRest("vault-secret-to-protect")
+        val corrupted = encrypted.dropLast(2) + "xx"
+
+        try {
+            security.decryptAtRest(corrupted)
+            throw AssertionError("Corrupted versioned ciphertext must not be returned as plaintext.")
+        } catch (expected: IllegalStateException) {
+            assertTrue(expected.message!!.contains("Unable to decrypt"))
+        }
+    }
+
+    @Test
+    fun `legacy plaintext fallback values remain readable`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+        assertEquals("legacy-plain-value", security.decryptAtRest("legacy-plain-value"))
     }
 
     @Test
