@@ -29,6 +29,7 @@ class VaultSecurityManager(context: Context) {
         private const val KEYSTORE_PROVIDER = "AndroidKeyStore"
         private const val KEY_ALIAS = "PassGenLocalEncryptionKey"
         private const val FALLBACK_SECRET_KEY = "passgen_fallback_local_key"
+        private const val CIPHERTEXT_PREFIX = "v1:"
 
         private const val PREF_LOCK_ENABLED = "pref_lock_enabled"
         private const val PREF_PIN_HASH = "pref_pin_hash"
@@ -108,49 +109,76 @@ class VaultSecurityManager(context: Context) {
      */
     fun encryptAtRest(plainText: String): String {
         if (plainText.isEmpty()) return ""
-        return try {
+        try {
             val key = getSecretKey()
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             val iv = ByteArray(GCM_IV_LENGTH)
             secureRandom.nextBytes(iv)
-            val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
-            cipher.init(Cipher.ENCRYPT_MODE, key, spec)
+            cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_LENGTH, iv))
 
             val cipherText = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
             val combined = ByteArray(iv.size + cipherText.size)
             System.arraycopy(iv, 0, combined, 0, iv.size)
             System.arraycopy(cipherText, 0, combined, iv.size, cipherText.size)
-            Base64.encodeToString(combined, Base64.NO_WRAP)
-        } catch (e: Exception) {
-            // Fallback safety without compromising unencrypted exposure
-            plainText
+            return CIPHERTEXT_PREFIX + Base64.encodeToString(combined, Base64.NO_WRAP)
+        } catch (error: Exception) {
+            // Never return plaintext to a caller that expects an encrypted value.
+            throw IllegalStateException("Vault encryption failed; the value was not stored.", error)
         }
     }
 
     /**
-     * Decrypt AES-256-GCM encrypted string.
+     * Decrypts versioned AES-256-GCM values. Pre-version values are read using the
+     * legacy format so existing vault entries remain accessible during migration.
      */
     fun decryptAtRest(encryptedText: String): String {
         if (encryptedText.isEmpty()) return ""
+
+        if (encryptedText.startsWith(CIPHERTEXT_PREFIX)) {
+            val payload = encryptedText.removePrefix(CIPHERTEXT_PREFIX)
+            return try {
+                decryptCiphertextPayload(payload)
+            } catch (error: Exception) {
+                throw IllegalStateException(
+                    "Unable to decrypt a versioned vault value. The stored data was not changed.",
+                    error
+                )
+            }
+        }
+
+        // Legacy records were stored as Base64(IV + ciphertext). Earlier versions
+        // also returned the input unchanged after encryption errors, so preserve
+        // non-ciphertext legacy values rather than making existing entries vanish.
         return try {
-            val combined = Base64.decode(encryptedText, Base64.NO_WRAP)
-            if (combined.size < GCM_IV_LENGTH) return encryptedText
-
-            val iv = ByteArray(GCM_IV_LENGTH)
-            val cipherText = ByteArray(combined.size - GCM_IV_LENGTH)
-            System.arraycopy(combined, 0, iv, 0, GCM_IV_LENGTH)
-            System.arraycopy(combined, GCM_IV_LENGTH, cipherText, 0, cipherText.size)
-
-            val key = getSecretKey()
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
-            cipher.init(Cipher.DECRYPT_MODE, key, spec)
-
-            val decrypted = cipher.doFinal(cipherText)
-            String(decrypted, Charsets.UTF_8)
+            val decoded = Base64.decode(encryptedText, Base64.NO_WRAP)
+            if (decoded.size < GCM_IV_LENGTH + (GCM_TAG_LENGTH / 8)) {
+                encryptedText
+            } else {
+                try {
+                    decryptCiphertextBytes(decoded)
+                } catch (_: Exception) {
+                    encryptedText
+                }
+            }
         } catch (_: Exception) {
             encryptedText
         }
+    }
+
+    private fun decryptCiphertextPayload(payload: String): String {
+        val combined = Base64.decode(payload, Base64.NO_WRAP)
+        require(combined.size >= GCM_IV_LENGTH + (GCM_TAG_LENGTH / 8)) {
+            "Encrypted vault value is truncated."
+        }
+        return decryptCiphertextBytes(combined)
+    }
+
+    private fun decryptCiphertextBytes(combined: ByteArray): String {
+        val iv = combined.copyOfRange(0, GCM_IV_LENGTH)
+        val cipherText = combined.copyOfRange(GCM_IV_LENGTH, combined.size)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, getSecretKey(), GCMParameterSpec(GCM_TAG_LENGTH, iv))
+        return String(cipher.doFinal(cipherText), Charsets.UTF_8)
     }
 
     // --- Master Lock Management ---

@@ -62,7 +62,7 @@ fun PasswordStrengthBar(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             for (i in 0..3) {
-                val isActive = i <= strength.score
+                val isActive = i < strength.score
                 Box(
                     modifier = Modifier
                         .weight(1f)
