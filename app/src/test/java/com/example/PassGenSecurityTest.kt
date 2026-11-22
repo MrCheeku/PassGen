@@ -216,6 +216,29 @@ class PassGenSecurityTest {
     }
 
     @Test
+    fun `invalid legacy fallback key fails closed instead of regenerating a key`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferences = context.getSharedPreferences("passgen_vault_security", Context.MODE_PRIVATE)
+        val originalKey = preferences.getString("passgen_fallback_local_key", null)
+        preferences.edit().putString("passgen_fallback_local_key", "invalid-base64-key").commit()
+
+        try {
+            val security = VaultSecurityManager(context)
+            assertThrows(IllegalStateException::class.java) {
+                security.encryptAtRest("must-not-be-stored-unencrypted")
+            }
+        } finally {
+            val editor = preferences.edit()
+            if (originalKey == null) {
+                editor.remove("passgen_fallback_local_key")
+            } else {
+                editor.putString("passgen_fallback_local_key", originalKey)
+            }
+            editor.commit()
+        }
+    }
+
+    @Test
     fun `legacy plaintext fallback values remain readable`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val security = VaultSecurityManager(context)
