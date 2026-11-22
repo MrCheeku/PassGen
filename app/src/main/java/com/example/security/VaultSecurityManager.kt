@@ -47,9 +47,14 @@ class VaultSecurityManager(context: Context) {
     }
 
     private fun ensureAtRestKey() {
-        // Once a fallback key has encrypted vault values, keep using it. Creating a
-        // Keystore key later would make those existing values impossible to decrypt.
+        // Preserve a fallback key created by older installations so existing vault
+        // entries remain readable. New fallback keys are permitted only in Robolectric.
         if (prefs.contains(FALLBACK_SECRET_KEY)) return
+
+        if (isRobolectricRuntime()) {
+            createFallbackSecretKeyForTests()
+            return
+        }
 
         try {
             val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER)
@@ -70,123 +75,51 @@ class VaultSecurityManager(context: Context) {
                 keyGenerator.init(spec)
                 keyGenerator.generateKey()
             }
-        } catch (_: Exception) {
-            // AndroidKeyStore may not be available in standard JVM Robolectric test environments.
-            // In that case, we lazily generate a persistent random fallback key in private SharedPreferences.
-            if (!prefs.contains(FALLBACK_SECRET_KEY)) {
-                val keyBytes = ByteArray(32)
-                secureRandom.nextBytes(keyBytes)
-                prefs.edit().putString(FALLBACK_SECRET_KEY, Base64.encodeToString(keyBytes, Base64.NO_WRAP)).apply()
-            }
+        } catch (error: Exception) {
+            throw IllegalStateException(
+                "Secure Android Keystore is unavailable; vault encryption is disabled.",
+                error
+            )
         }
     }
 
+    private fun isRobolectricRuntime(): Boolean =
+        Build.FINGERPRINT.startsWith("robolectric", ignoreCase = true)
+
+    private fun createFallbackSecretKeyForTests() {
+        val keyBytes = ByteArray(32)
+        secureRandom.nextBytes(keyBytes)
+        val stored = prefs.edit()
+            .putString(FALLBACK_SECRET_KEY, Base64.encodeToString(keyBytes, Base64.NO_WRAP))
+            .commit()
+        check(stored) { "Unable to initialize the test vault encryption key." }
+    }
+
     private fun getSecretKey(): SecretKey {
-        // Prefer an existing fallback key so a later Keystore recovery cannot rotate
-        // the key underneath data that was already encrypted with the fallback.
+        // Existing fallback keys remain supported for compatibility, but new
+        // production keys must always be held by Android Keystore.
         if (prefs.contains(FALLBACK_SECRET_KEY)) return getFallbackSecretKey()
 
         return try {
             val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER)
             keyStore.load(null)
-            if (keyStore.containsAlias(KEY_ALIAS)) {
-                keyStore.getKey(KEY_ALIAS, null) as SecretKey
-            } else {
-                getFallbackSecretKey()
-            }
-        } catch (_: Exception) {
-            getFallbackSecretKey()
+            check(keyStore.containsAlias(KEY_ALIAS)) { "Vault encryption key is missing." }
+            keyStore.getKey(KEY_ALIAS, null) as? SecretKey
+                ?: throw IllegalStateException("Vault encryption key is unavailable.")
+        } catch (error: Exception) {
+            throw IllegalStateException(
+                "Secure Android Keystore is unavailable; vault data was not changed.",
+                error
+            )
         }
     }
 
     private fun getFallbackSecretKey(): SecretKey {
-        var keyB64 = prefs.getString(FALLBACK_SECRET_KEY, null)
-        if (keyB64 == null) {
-            val keyBytes = ByteArray(32)
-            secureRandom.nextBytes(keyBytes)
-            keyB64 = Base64.encodeToString(keyBytes, Base64.NO_WRAP)
-            prefs.edit().putString(FALLBACK_SECRET_KEY, keyB64).apply()
-        }
+        val keyB64 = prefs.getString(FALLBACK_SECRET_KEY, null)
+            ?: throw IllegalStateException("The legacy vault encryption key is missing.")
         val raw = Base64.decode(keyB64, Base64.NO_WRAP)
+        require(raw.size == 32) { "The legacy vault encryption key is invalid." }
         return SecretKeySpec(raw, "AES")
-    }
-
-    /**
-     * Encrypt sensitive string (e.g. password or sensitive notes) using AES-256-GCM.
-     * Returns a versioned Base64 payload containing [12-byte IV + GCM ciphertext].
-     */
-    fun encryptAtRest(plainText: String): String {
-        if (plainText.isEmpty()) return ""
-        try {
-            val key = getSecretKey()
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            val iv = ByteArray(GCM_IV_LENGTH)
-            secureRandom.nextBytes(iv)
-            cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_LENGTH, iv))
-
-            val cipherText = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
-            val combined = ByteArray(iv.size + cipherText.size)
-            System.arraycopy(iv, 0, combined, 0, iv.size)
-            System.arraycopy(cipherText, 0, combined, iv.size, cipherText.size)
-            return CIPHERTEXT_PREFIX + Base64.encodeToString(combined, Base64.NO_WRAP)
-        } catch (error: Exception) {
-            // Never return plaintext to a caller that expects an encrypted value.
-            throw IllegalStateException("Vault encryption failed; the value was not stored.", error)
-        }
-    }
-
-    /**
-     * Decrypts versioned AES-256-GCM values. Pre-version values are read using the
-     * legacy format so existing vault entries remain accessible during migration.
-     */
-    fun decryptAtRest(encryptedText: String): String {
-        if (encryptedText.isEmpty()) return ""
-
-        if (encryptedText.startsWith(CIPHERTEXT_PREFIX)) {
-            val payload = encryptedText.removePrefix(CIPHERTEXT_PREFIX)
-            return try {
-                decryptCiphertextPayload(payload)
-            } catch (error: Exception) {
-                throw IllegalStateException(
-                    "Unable to decrypt a versioned vault value. The stored data was not changed.",
-                    error
-                )
-            }
-        }
-
-        // Legacy records were stored as Base64(IV + ciphertext). Earlier versions
-        // also returned the input unchanged after encryption errors, so preserve
-        // non-ciphertext legacy values rather than making existing entries vanish.
-        return try {
-            val decoded = Base64.decode(encryptedText, Base64.NO_WRAP)
-            if (decoded.size < GCM_IV_LENGTH + (GCM_TAG_LENGTH / 8)) {
-                encryptedText
-            } else {
-                try {
-                    decryptCiphertextBytes(decoded)
-                } catch (_: Exception) {
-                    encryptedText
-                }
-            }
-        } catch (_: Exception) {
-            encryptedText
-        }
-    }
-
-    private fun decryptCiphertextPayload(payload: String): String {
-        val combined = Base64.decode(payload, Base64.NO_WRAP)
-        require(combined.size >= GCM_IV_LENGTH + (GCM_TAG_LENGTH / 8)) {
-            "Encrypted vault value is truncated."
-        }
-        return decryptCiphertextBytes(combined)
-    }
-
-    private fun decryptCiphertextBytes(combined: ByteArray): String {
-        val iv = combined.copyOfRange(0, GCM_IV_LENGTH)
-        val cipherText = combined.copyOfRange(GCM_IV_LENGTH, combined.size)
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE, getSecretKey(), GCMParameterSpec(GCM_TAG_LENGTH, iv))
-        return String(cipher.doFinal(cipherText), Charsets.UTF_8)
     }
 
     // --- Master Lock Management ---
