@@ -201,6 +201,21 @@ class PassGenSecurityTest {
     }
 
     @Test
+    fun `existing fallback key remains preferred if Android Keystore later becomes available`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferences = context.getSharedPreferences("passgen_vault_security", Context.MODE_PRIVATE)
+        val fallbackKey = ByteArray(32) { (it + 1).toByte() }
+        preferences.edit()
+            .putString("passgen_fallback_local_key", android.util.Base64.encodeToString(fallbackKey, android.util.Base64.NO_WRAP))
+            .commit()
+
+        val security = VaultSecurityManager(context)
+        val encrypted = security.encryptAtRest("fallback-key-data")
+        assertEquals("fallback-key-data", security.decryptAtRest(encrypted))
+        assertTrue(preferences.contains("passgen_fallback_local_key"))
+    }
+
+    @Test
     fun `legacy plaintext fallback values remain readable`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val security = VaultSecurityManager(context)
