@@ -47,6 +47,10 @@ class VaultSecurityManager(context: Context) {
     }
 
     private fun ensureAtRestKey() {
+        // Once a fallback key has encrypted vault values, keep using it. Creating a
+        // Keystore key later would make those existing values impossible to decrypt.
+        if (prefs.contains(FALLBACK_SECRET_KEY)) return
+
         try {
             val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER)
             keyStore.load(null)
@@ -78,6 +82,10 @@ class VaultSecurityManager(context: Context) {
     }
 
     private fun getSecretKey(): SecretKey {
+        // Prefer an existing fallback key so a later Keystore recovery cannot rotate
+        // the key underneath data that was already encrypted with the fallback.
+        if (prefs.contains(FALLBACK_SECRET_KEY)) return getFallbackSecretKey()
+
         return try {
             val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER)
             keyStore.load(null)
@@ -105,7 +113,7 @@ class VaultSecurityManager(context: Context) {
 
     /**
      * Encrypt sensitive string (e.g. password or sensitive notes) using AES-256-GCM.
-     * Returns Base64 string composed of [12-byte IV + GCM ciphertext].
+     * Returns a versioned Base64 payload containing [12-byte IV + GCM ciphertext].
      */
     fun encryptAtRest(plainText: String): String {
         if (plainText.isEmpty()) return ""
