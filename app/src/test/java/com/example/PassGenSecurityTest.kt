@@ -201,7 +201,7 @@ class PassGenSecurityTest {
     }
 
     @Test
-    fun `existing fallback key remains preferred if Android Keystore later becomes available`() {
+    fun `legacy fallback key remains usable when Android Keystore is unavailable`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val preferences = context.getSharedPreferences("passgen_vault_security", Context.MODE_PRIVATE)
         val fallbackKey = ByteArray(32) { (it + 1).toByte() }
