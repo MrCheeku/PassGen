@@ -216,18 +216,23 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         // Calculate reused passwords to accurately filter
         val passwordCounts = mutableMapOf<String, Int>()
         for (item in items) {
-            passwordCounts[item.password] = passwordCounts.getOrDefault(item.password, 0) + 1
+            if (item.password.isNotEmpty()) {
+                passwordCounts[item.password] = passwordCounts.getOrDefault(item.password, 0) + 1
+            }
         }
 
         val categoryFiltered = when (filter) {
             VaultFilter.ALL -> searchMatched
             VaultFilter.FAVORITES -> searchMatched.filter { it.isFavorite }
             VaultFilter.NEEDS_ATTENTION -> searchMatched.filter {
-                it.isWeak || it.isShort || it.isOld || (passwordCounts[it.password] ?: 0) > 1
+                it.isWeak || it.isShort || it.isOld ||
+                    (it.password.isNotEmpty() && (passwordCounts[it.password] ?: 0) > 1)
             }
             VaultFilter.WEAK -> searchMatched.filter { it.isWeak }
             VaultFilter.SHORT -> searchMatched.filter { it.isShort }
-            VaultFilter.REUSED -> searchMatched.filter { (passwordCounts[it.password] ?: 0) > 1 }
+            VaultFilter.REUSED -> searchMatched.filter {
+                it.password.isNotEmpty() && (passwordCounts[it.password] ?: 0) > 1
+            }
             VaultFilter.OLD -> searchMatched.filter { it.isOld }
         }
 
