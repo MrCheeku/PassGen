@@ -34,6 +34,46 @@ jobs:
         with:
           gradle-version: '9.3.1'
       - name: Run JVM and Robolectric tests
-        run: gradle test
+        shell: bash
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            log_file="$(mktemp)"
+            if gradle test 2>&1 | tee "$log_file"; then
+              rm -f "$log_file"
+              exit 0
+            fi
+            if ! grep -Eiq '(429|Too Many Requests|Could not GET|Could not download)' "$log_file"; then
+              rm -f "$log_file"
+              exit 1
+            fi
+            rm -f "$log_file"
+            if [ "$attempt" -eq 3 ]; then
+              echo "Gradle dependency download remained rate-limited after 3 attempts."
+              exit 1
+            fi
+            echo "Maven dependency download was rate-limited; retrying in $((attempt * 15)) seconds."
+            sleep "$((attempt * 15))"
+          done
       - name: Assemble debug APK
-        run: gradle assembleDebug
+        shell: bash
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            log_file="$(mktemp)"
+            if gradle assembleDebug 2>&1 | tee "$log_file"; then
+              rm -f "$log_file"
+              exit 0
+            fi
+            if ! grep -Eiq '(429|Too Many Requests|Could not GET|Could not download)' "$log_file"; then
+              rm -f "$log_file"
+              exit 1
+            fi
+            rm -f "$log_file"
+            if [ "$attempt" -eq 3 ]; then
+              echo "Gradle dependency download remained rate-limited after 3 attempts."
+              exit 1
+            fi
+            echo "Maven dependency download was rate-limited; retrying in $((attempt * 15)) seconds."
+            sleep "$((attempt * 15))"
+          done
