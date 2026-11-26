@@ -4,7 +4,7 @@ on:
   watch:
     types: [started]
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "23 0 * * *"
   workflow_dispatch:
 
 permissions:
@@ -32,6 +32,13 @@ jobs:
 
             const current = Buffer.from(file.data.content, "base64").toString("utf8");
             const badge = `https://img.shields.io/github/stars/${owner}/${repo}?style=for-the-badge&label=STARS&cacheSeconds=60&v=${stars}`;
+
+            const marker = current.match(/<!-- LIVE_STARS:\s*(\d+)\s*\|/);
+            const expectedBadge = `https://img.shields.io/github/stars/${owner}/${repo}?style=for-the-badge&label=STARS&cacheSeconds=60&v=${stars}`;
+            if (marker && Number(marker[1]) === stars && current.includes(expectedBadge)) {
+              core.info(`README already reflects ${stars} stars; skipping a no-op commit.`);
+              return;
+            }
 
             let updated = current.replace(
               /https:\/\/img\.shields\.io\/github\/stars\/MrCheeku\/(?:PassGen|SentinelX)\?style=for-the-badge&label=STARS[^)\"\s]*/,
