@@ -6,7 +6,6 @@
   <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/stars/MrCheeku/PassGen?style=for-the-badge&label=STARS&cacheSeconds=60&v=1" alt="GitHub stars" /></a>
   <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/last-commit/MrCheeku/PassGen?style=for-the-badge&label=UPDATED" alt="Last commit" /></a>
   <a href="https://github.com/MrCheeku/PassGen"><img src="https://img.shields.io/github/repo-size/MrCheeku/PassGen?style=for-the-badge&label=SIZE" alt="Repository size" /></a>
-  <a href="https://github.com/MrCheeku/PassGen/actions/workflows/android-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/MrCheeku/PassGen/android-ci.yml?branch=main&style=for-the-badge&label=ANDROID%20CI" alt="Android CI status" /></a>
 </p>
 
 <p><strong>Strong password generation • Local vault storage • Encrypted backups</strong></p>
@@ -210,7 +209,7 @@ This README describes the implementation currently present in the repository; it
 ### Requirements
 
 - Android Studio with a recent Android/Gradle toolchain
-- JDK 17+ (required by the configured Android Gradle Plugin and Gradle toolchain).
+- JDK 11+
 - Android SDK matching the project's configured compile/target SDK
 
 ### Clone with HTTPS
@@ -218,7 +217,7 @@ This README describes the implementation currently present in the repository; it
 ```bash
 git clone https://github.com/MrCheeku/PassGen.git
 cd PassGen
-gradle :app:assembleDebug
+gradle assembleDebug
 ```
 
 ### Clone with SSH
@@ -228,10 +227,10 @@ SSH is useful when you regularly clone, pull, or push from your development mach
 ```bash
 git clone git@github.com:MrCheeku/PassGen.git
 cd PassGen
-gradle :app:assembleDebug
+gradle assembleDebug
 ```
 
-> The repository currently uses Gradle project configuration but does not include a checked-in `gradlew` wrapper script. CI installs Gradle 9.3.1 directly; use that version locally or open the project in Android Studio.
+> The repository currently uses Gradle project configuration but does not include a checked-in `gradlew` wrapper script. Opening the project in Android Studio is the easiest setup path.
 
 The Android module is configured for `compileSdk` 36 and `targetSdk` 36, with Java source/target compatibility set to Java 11.
 
@@ -242,7 +241,7 @@ The Android module is configured for `compileSdk` 36 and `targetSdk` 36, with Ja
 The Android module includes JVM tests, Android instrumentation tests, Compose UI test dependencies, Robolectric, and Roborazzi testing support.
 
 ```bash
-gradle :app:testDebugUnitTest
+gradle test
 ```
 
 ---
@@ -269,7 +268,7 @@ The encrypted payload is generated from vault data and a user-supplied export pa
 
 <div align="center">
 
-<a href="https://techwithcheeku.app/"><img src="https://img.shields.io/badge/Visit%20Tech%20with%20Cheeku-Website-7c3aed?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Visit Tech with Cheeku website" /></a>
+<a href="https://techwithcheeku.lovable.app/"><img src="https://img.shields.io/badge/Visit%20Tech%20with%20Cheeku-Website-7c3aed?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Visit Tech with Cheeku website" /></a>
 
 <a href="https://whatsapp.com/channel/0029Vb9OpwgD8SDvISwrn73Y"><img src="https://img.shields.io/badge/Join%20WhatsApp%20Channel-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="Join Tech with Cheeku WhatsApp channel" /></a>
 
