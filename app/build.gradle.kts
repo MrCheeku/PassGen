@@ -163,6 +163,11 @@ kover {
       html {
         htmlDir = layout.buildDirectory.dir("reports/kover/html").get().asFile
       }
+      verify {
+        rule {
+          minBound(90)
+        }
+      }
     }
   }
 }
