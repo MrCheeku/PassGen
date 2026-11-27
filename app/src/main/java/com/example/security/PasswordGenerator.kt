@@ -44,10 +44,6 @@ object PasswordGenerator {
             requiredCharacters += LOWERCASE[secureRandom.nextInt(LOWERCASE.length)]
         }
 
-        require(options.length >= requiredCharacters.size) {
-            "Password length is too short for the selected character groups."
-        }
-
         val pool = characterPool.toString()
         val result = CharArray(options.length)
 

@@ -6,6 +6,7 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
+  alias(libs.plugins.kover)
   // alias(libs.plugins.google.services) - Offline only, no Firebase/Google services needed
 }
 
@@ -49,7 +50,16 @@ android {
     compose = true
     buildConfig = true
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      all {
+        // Robolectric's default repo1 endpoint is intermittently unreachable on hosted runners.
+        it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+        it.systemProperty("robolectric.dependency.repo.id", "central")
+      }
+    }
+  }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
@@ -130,4 +140,34 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
+}
+
+
+// Coverage is measured for application data and security logic exercised by JVM/Robolectric tests.
+// Compose UI rendering and Android on-device instrumentation tests are intentionally excluded.
+kover {
+  reports {
+    filters {
+      includes {
+        classes("com.example.data.*", "com.example.security.*")
+      }
+      excludes {
+        // Room/KSP-generated implementation code is not application-authored logic.
+        classes("com.example.data.AppDatabase_Impl*", "com.example.data.VaultDao_Impl*")
+      }
+    }
+    variant("debug") {
+      xml {
+        xmlFile = layout.buildDirectory.file("reports/kover/coverage.xml").get().asFile
+      }
+      html {
+        htmlDir = layout.buildDirectory.dir("reports/kover/html").get().asFile
+      }
+      verify {
+        rule {
+          minBound(90)
+        }
+      }
+    }
+  }
 }

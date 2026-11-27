@@ -38,8 +38,41 @@ jobs:
         with:
           gradle-version: "9.3.1"
 
-      - name: Run unit tests
-        run: gradle :app:testDebugUnitTest --no-daemon
+      - name: Run JVM and Robolectric tests with coverage
+        run: gradle :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug --no-daemon
+
+      - name: Summarize line coverage
+        if: always() && hashFiles('app/build/reports/kover/coverage.xml') != ''
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("app/build/reports/kover/coverage.xml").getroot()
+          line = next(counter for counter in root.findall("counter") if counter.attrib["type"] == "LINE")
+          covered = int(line.attrib["covered"])
+          missed = int(line.attrib["missed"])
+          total = covered + missed
+          percent = (covered / total * 100) if total else 100.0
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("### PassGen line coverage\\n\\n")
+              summary.write(f"**{percent:.2f}%** ({covered}/{total} measured lines)\\n\\n")
+              summary.write("Scope: `com.example.data` and `com.example.security`; generated Room implementation classes excluded.\\n")
+          print(f"PassGen line coverage: {percent:.2f}% ({covered}/{total})")
+          PY
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: passgen-coverage-report
+          path: |
+            app/build/reports/kover/
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon

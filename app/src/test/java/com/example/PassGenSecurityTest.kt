@@ -281,4 +281,274 @@ class PassGenSecurityTest {
         assertTrue(security.verifyMasterLock("9999"))
         assertFalse(security.verifyMasterLock("5892"))
     }
+
+
+    @Test
+    fun `password generator honours uppercase and symbol only selections at boundary lengths`() {
+        val uppercase = PasswordGenerator.generate(
+            PasswordGenerator.GeneratorOptions(
+                length = 6,
+                includeUppercase = true,
+                includeLowercase = false,
+                includeNumbers = false,
+                includeSymbols = false
+            )
+        )
+        assertEquals(6, uppercase.length)
+        assertTrue(uppercase.all { it.isUpperCase() })
+
+        val symbols = PasswordGenerator.generate(
+            PasswordGenerator.GeneratorOptions(
+                length = 64,
+                includeUppercase = false,
+                includeLowercase = false,
+                includeNumbers = false,
+                includeSymbols = true
+            )
+        )
+        assertEquals(64, symbols.length)
+        assertTrue(symbols.all { "!@#$%^&*()-_=+[]{}|;:,.<>?".contains(it) })
+    }
+
+    @Test
+    fun `password generator rejects lengths above the supported maximum`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            PasswordGenerator.generate(PasswordGenerator.GeneratorOptions(length = 65))
+        }
+    }
+
+    @Test
+    fun `strength calculator handles empty short descending and case insensitive common patterns`() {
+        val empty = PasswordStrengthCalculator.calculate("")
+        val short = PasswordStrengthCalculator.calculate("a")
+        val descending = PasswordStrengthCalculator.calculate("Zyxw9876!@#")
+        val commonMixedCase = PasswordStrengthCalculator.calculate("WELCome2026!Aa")
+
+        assertEquals(StrengthLevel.VERY_WEAK, empty.level)
+        assertEquals(0.0, empty.entropyBits, 0.0)
+        assertEquals(StrengthLevel.VERY_WEAK, short.level)
+        assertTrue(descending.feedback.any { it.contains("sequential") })
+        assertTrue(commonMixedCase.feedback.any { it.contains("common words") })
+        assertTrue(commonMixedCase.score <= 1)
+    }
+
+    @Test
+    fun `health analyzer reports excellent good attention and urgent summaries`() {
+        fun item(id: Long, password: String, updatedAt: Long = System.currentTimeMillis()) =
+            VaultItem(
+                id = id,
+                title = "Credential $id",
+                username = "user$id",
+                password = password,
+                website = "https://service$id.test",
+                updatedAt = updatedAt
+            )
+
+        val strongPasswords = listOf(
+            "mP9!vX2@qL7#zR5&",
+            "tR8@kM4!pV6#xQ2&",
+            "bN7#sL3@wC9!fH5%"
+        )
+        val excellent = PasswordHealthAnalyzer.analyze(listOf(item(1, strongPasswords[0])))
+        assertTrue(excellent.summaryLabel.contains("Excellent"))
+        assertEquals(100, excellent.overallScore)
+
+        val good = PasswordHealthAnalyzer.analyze(
+            listOf(
+                item(1, "123"),
+                item(2, strongPasswords[0]),
+                item(3, strongPasswords[1]),
+                item(4, strongPasswords[2])
+            )
+        )
+        assertTrue(good.summaryLabel.contains("Good"))
+        assertEquals(75, good.overallScore)
+
+        val attention = PasswordHealthAnalyzer.analyze(
+            listOf(
+                item(1, "123"),
+                item(2, "abc"),
+                item(3, strongPasswords[0]),
+                item(4, strongPasswords[1])
+            )
+        )
+        assertTrue(attention.summaryLabel.contains("need attention"))
+        assertEquals(50, attention.overallScore)
+
+        val urgent = PasswordHealthAnalyzer.analyze(
+            listOf(
+                item(1, "123"),
+                item(2, "abc"),
+                item(3, "tiny"),
+                item(4, strongPasswords[0])
+            )
+        )
+        assertTrue(urgent.summaryLabel.contains("urgent attention"))
+        assertEquals(25, urgent.overallScore)
+    }
+
+    @Test
+    fun `health analyzer counts old credentials and missing websites separately`() {
+        val now = System.currentTimeMillis()
+        val oldTimestamp = now - (91L * 24 * 60 * 60 * 1000)
+        val report = PasswordHealthAnalyzer.analyze(
+            listOf(
+                VaultItem(
+                    id = 1,
+                    title = "Old",
+                    username = "old-user",
+                    password = "mP9!vX2@qL7#zR5&",
+                    website = "",
+                    updatedAt = oldTimestamp
+                ),
+                VaultItem(
+                    id = 2,
+                    title = "New",
+                    username = "new-user",
+                    password = "tR8@kM4!pV6#xQ2&",
+                    website = "https://new.test",
+                    updatedAt = now
+                )
+            )
+        )
+
+        assertEquals(1, report.oldCount)
+        assertEquals(1, report.missingWebsiteCount)
+        assertEquals(1, report.needingAttentionCount)
+    }
+
+    @Test
+    fun `at rest encryption supports empty and legacy unversioned values`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+
+        assertEquals("", security.encryptAtRest(""))
+        assertEquals("", security.decryptAtRest(""))
+
+        val encrypted = security.encryptAtRest("legacy-ciphertext-value")
+        assertTrue(encrypted.startsWith("v1:"))
+        assertEquals(
+            "legacy-ciphertext-value",
+            security.decryptAtRest(encrypted.removePrefix("v1:"))
+        )
+        assertEquals("legacy-plaintext", security.decryptAtRest("legacy-plaintext"))
+    }
+
+    @Test
+    fun `master lock rejects short pins and failed authentication changes nothing`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+
+        assertFalse(security.setupMasterLock("123"))
+        assertTrue(security.verifyMasterLock("anything"))
+
+        assertTrue(security.setupMasterLock("2468"))
+        assertFalse(security.changeMasterLock("0000", "1357"))
+        assertFalse(security.disableMasterLock("0000"))
+        assertTrue(security.verifyMasterLock("2468"))
+
+        assertFalse(security.changeMasterLock("2468", "123"))
+        assertTrue(security.verifyMasterLock("2468"))
+        assertTrue(security.disableMasterLock("2468"))
+        assertFalse(security.isMasterLockEnabled())
+    }
+
+    @Test
+    fun `theme preferences default to system and preserve chosen theme`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+
+        assertEquals("system", security.getAppTheme())
+        security.setAppTheme("dark")
+        assertEquals("dark", security.getAppTheme())
+        security.setAppTheme("light")
+        assertEquals("light", security.getAppTheme())
+    }
+
+    @Test
+    fun `encrypted backup rejects empty and incorrect passwords`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            security.encryptBackupPayload("[]", "")
+        }
+
+        val backup = security.encryptBackupPayload("[]", "CorrectPassphrase!2026")
+        assertThrows(Exception::class.java) {
+            security.decryptBackupPayload(backup, "WrongPassphrase!2026")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            security.decryptBackupPayload(backup, "")
+        }
+        assertThrows(IllegalStateException::class.java) {
+            security.decryptBackupPayload("{}", "CorrectPassphrase!2026")
+        }
+    }
+
+
+    @Test
+    fun `generator falls back to lowercase and digits when no character groups are selected`() {
+        val password = PasswordGenerator.generate(
+            PasswordGenerator.GeneratorOptions(
+                length = 12,
+                includeUppercase = false,
+                includeLowercase = false,
+                includeNumbers = false,
+                includeSymbols = false
+            )
+        )
+
+        assertEquals(12, password.length)
+        assertTrue(password.all { it.isLowerCase() || it.isDigit() })
+    }
+
+    @Test
+    fun `at rest encryption fails closed if its legacy fallback key is removed`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferences = context.getSharedPreferences("passgen_vault_security", Context.MODE_PRIVATE)
+        val security = VaultSecurityManager(context)
+        val originalKey = preferences.getString("passgen_fallback_local_key", null)
+
+        try {
+            preferences.edit().remove("passgen_fallback_local_key").commit()
+            assertThrows(IllegalStateException::class.java) {
+                security.encryptAtRest("never-store-this-as-plaintext")
+            }
+        } finally {
+            val editor = preferences.edit()
+            if (originalKey == null) editor.remove("passgen_fallback_local_key")
+            else editor.putString("passgen_fallback_local_key", originalKey)
+            editor.commit()
+        }
+    }
+
+    @Test
+    fun `truncated versioned ciphertext is rejected rather than returned as plaintext`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+
+        assertThrows(IllegalStateException::class.java) {
+            security.decryptAtRest("v1:AA==")
+        }
+    }
+
+    @Test
+    fun `encrypted backup rejects missing iv and missing ciphertext fields`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+        val salt = android.util.Base64.encodeToString(ByteArray(16), android.util.Base64.NO_WRAP)
+        val iv = android.util.Base64.encodeToString(ByteArray(12), android.util.Base64.NO_WRAP)
+
+        val missingIv = """{"salt":"$salt","ciphertext":"AA=="}"""
+        val missingCiphertext = """{"salt":"$salt","iv":"$iv"}"""
+
+        assertThrows(IllegalStateException::class.java) {
+            security.decryptBackupPayload(missingIv, "ExportPassphrase!2026")
+        }
+        assertThrows(IllegalStateException::class.java) {
+            security.decryptBackupPayload(missingCiphertext, "ExportPassphrase!2026")
+        }
+    }
+
 }
