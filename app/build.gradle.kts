@@ -6,6 +6,7 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
+  alias(libs.plugins.kover)
   // alias(libs.plugins.google.services) - Offline only, no Firebase/Google services needed
 }
 
@@ -130,4 +131,25 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
+}
+
+
+// Coverage is measured for application data and security logic exercised by JVM/Robolectric tests.
+// Compose UI rendering and Android on-device instrumentation tests are intentionally excluded.
+kover {
+  reports {
+    filters {
+      includes {
+        classes("com.example.data.*", "com.example.security.*")
+      }
+    }
+    variant("debug") {
+      xml {
+        xmlFile = layout.buildDirectory.file("reports/kover/coverage.xml").get().asFile
+      }
+      html {
+        htmlDir = layout.buildDirectory.dir("reports/kover/html").get().asFile
+      }
+    }
+  }
 }
