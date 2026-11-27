@@ -32,7 +32,7 @@ jobs:
         uses: android-actions/setup-android@v4
       - name: Install Android SDK packages
         run: |
-          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;37.0.0"
           # The API 37 SDK Manager package currently installs under android-37.0,
           # while AGP resolves the platform by the android-37 hash directory.
           if [ -d "$ANDROID_HOME/platforms/android-37.0" ] && [ ! -e "$ANDROID_HOME/platforms/android-37" ]; then
