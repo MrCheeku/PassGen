@@ -486,4 +486,69 @@ class PassGenSecurityTest {
         }
     }
 
+
+    @Test
+    fun `generator falls back to lowercase and digits when no character groups are selected`() {
+        val password = PasswordGenerator.generate(
+            PasswordGenerator.GeneratorOptions(
+                length = 12,
+                includeUppercase = false,
+                includeLowercase = false,
+                includeNumbers = false,
+                includeSymbols = false
+            )
+        )
+
+        assertEquals(12, password.length)
+        assertTrue(password.all { it.isLowerCase() || it.isDigit() })
+    }
+
+    @Test
+    fun `at rest encryption fails closed if its legacy fallback key is removed`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferences = context.getSharedPreferences("passgen_vault_security", Context.MODE_PRIVATE)
+        val security = VaultSecurityManager(context)
+        val originalKey = preferences.getString("passgen_fallback_local_key", null)
+
+        try {
+            preferences.edit().remove("passgen_fallback_local_key").commit()
+            assertThrows(IllegalStateException::class.java) {
+                security.encryptAtRest("never-store-this-as-plaintext")
+            }
+        } finally {
+            val editor = preferences.edit()
+            if (originalKey == null) editor.remove("passgen_fallback_local_key")
+            else editor.putString("passgen_fallback_local_key", originalKey)
+            editor.commit()
+        }
+    }
+
+    @Test
+    fun `truncated versioned ciphertext is rejected rather than returned as plaintext`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+
+        assertThrows(IllegalStateException::class.java) {
+            security.decryptAtRest("v1:AA==")
+        }
+    }
+
+    @Test
+    fun `encrypted backup rejects missing iv and missing ciphertext fields`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val security = VaultSecurityManager(context)
+        val salt = android.util.Base64.encodeToString(ByteArray(16), android.util.Base64.NO_WRAP)
+        val iv = android.util.Base64.encodeToString(ByteArray(12), android.util.Base64.NO_WRAP)
+
+        val missingIv = """{"salt":"$salt","ciphertext":"AA=="}"""
+        val missingCiphertext = """{"salt":"$salt","iv":"$iv"}"""
+
+        assertThrows(IllegalStateException::class.java) {
+            security.decryptBackupPayload(missingIv, "ExportPassphrase!2026")
+        }
+        assertThrows(IllegalStateException::class.java) {
+            security.decryptBackupPayload(missingCiphertext, "ExportPassphrase!2026")
+        }
+    }
+
 }
