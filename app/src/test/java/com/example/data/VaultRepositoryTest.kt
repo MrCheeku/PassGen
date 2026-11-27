@@ -172,16 +172,17 @@ class VaultRepositoryTest {
     }
 
     @Test
-    fun `wrong backup password is rejected without inserting credentials`() {
+    fun `wrong backup password is rejected without inserting credentials`() = runBlocking {
+        val encryptedBackup = repository.exportEncryptedBackup(
+            listOf(VaultItem(title = "A", username = "B", password = "Secret!123")),
+            "CorrectPassphrase!2026"
+        )
         val failure = org.junit.Assert.assertThrows(Exception::class.java) {
             runBlocking {
-                val encryptedBackup = repository.exportEncryptedBackup(
-                    listOf(VaultItem(title = "A", username = "B", password = "Secret!123")),
-                    "CorrectPassphrase!2026"
-                )
                 repository.importEncryptedBackup(encryptedBackup, "WrongPassphrase!2026")
             }
         }
+
         assertTrue(failure.message != null)
         assertTrue(dao.getAllVaultItems().first().isEmpty())
     }
