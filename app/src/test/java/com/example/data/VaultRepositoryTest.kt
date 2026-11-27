@@ -160,7 +160,7 @@ class VaultRepositoryTest {
         assertEquals("backup note", restored.notes)
         assertTrue(restored.isFavorite)
         assertEquals(1234L, restored.createdAt)
-        assertEquals(5678L, restored.updatedAt)
+        assertEquals(originalItems.single().updatedAt, restored.updatedAt)
     }
 
     @Test
