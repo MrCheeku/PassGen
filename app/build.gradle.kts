@@ -50,7 +50,16 @@ android {
     compose = true
     buildConfig = true
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      all {
+        // Robolectric's default repo1 endpoint is intermittently unreachable on hosted runners.
+        it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+        it.systemProperty("robolectric.dependency.repo.id", "central")
+      }
+    }
+  }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
@@ -141,6 +150,10 @@ kover {
     filters {
       includes {
         classes("com.example.data.*", "com.example.security.*")
+      }
+      excludes {
+        // Room/KSP-generated implementation code is not application-authored logic.
+        classes("com.example.data.AppDatabase_Impl*", "com.example.data.VaultDao_Impl*")
       }
     }
     variant("debug") {
