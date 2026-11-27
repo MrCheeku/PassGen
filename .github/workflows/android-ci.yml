@@ -38,8 +38,17 @@ jobs:
         with:
           gradle-version: "9.3.1"
 
-      - name: Run unit tests
-        run: gradle :app:testDebugUnitTest --no-daemon
+      - name: Run JVM and Robolectric tests with coverage
+        run: gradle :app:koverXmlReportDebug :app:koverHtmlReportDebug --no-daemon
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: passgen-coverage-report
+          path: app/build/reports/kover/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon
