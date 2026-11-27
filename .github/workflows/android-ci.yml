@@ -46,7 +46,9 @@ jobs:
         if: always()
         with:
           name: passgen-coverage-report
-          path: app/build/reports/kover/
+          path: |
+            app/build/reports/kover/
+            app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: warn
           retention-days: 14
 
