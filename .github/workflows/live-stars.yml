@@ -1,10 +1,6 @@
 name: Live Star Counter
 
 on:
-  watch:
-    types: [started]
-  schedule:
-    - cron: "23 0 * * *"
   workflow_dispatch:
 
 permissions:
@@ -32,21 +28,13 @@ jobs:
 
             const current = Buffer.from(file.data.content, "base64").toString("utf8");
             const badge = `https://img.shields.io/github/stars/${owner}/${repo}?style=for-the-badge&label=STARS&cacheSeconds=60&v=${stars}`;
+            const badgePrefix = `https://img.shields.io/github/stars/${owner}/${repo}?`;
+            const start = current.indexOf(badgePrefix);
+            const end = start >= 0 ? current.indexOf('"', start) : -1;
 
-            const marker = current.match(/<!-- LIVE_STARS:\s*(\d+)\s*\|/);
-            const expectedBadge = `https://img.shields.io/github/stars/${owner}/${repo}?style=for-the-badge&label=STARS&cacheSeconds=60&v=${stars}`;
-            if (marker && Number(marker[1]) === stars && current.includes(expectedBadge)) {
-              core.info(`README already reflects ${stars} stars; skipping a no-op commit.`);
-              return;
-            }
-
-            let updated = current.replace(
-              /https:\/\/img\.shields\.io\/github\/stars\/MrCheeku\/(?:PassGen|SentinelX)\?style=for-the-badge&label=STARS[^)\"\s]*/,
-              badge
-            );
-
-            updated = updated.replace(/<!-- LIVE_STARS:.*? -->\n?/g, "").trimEnd();
-            updated += `\n\n<!-- LIVE_STARS: ${stars} | automatically synced ${new Date().toISOString()} -->\n`;
+            const updated = end >= 0
+              ? current.slice(0, start) + badge + current.slice(end)
+              : current;
 
             if (updated === current) {
               core.info(`README already reflects ${stars} stars.`);

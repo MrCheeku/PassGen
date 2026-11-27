@@ -14,7 +14,11 @@ data class PasswordHealthReport(
     val needingAttentionCount: Int,
     val summaryLabel: String,
     val summaryColor: Color,
-    val overallScore: Int = if (totalCount > 0) ((strongCount.toFloat() / totalCount) * 100).toInt() else 100
+    val overallScore: Int = if (totalCount > 0) {
+        (((totalCount - needingAttentionCount).coerceAtLeast(0).toFloat() / totalCount) * 100).toInt()
+    } else {
+        100
+    }
 )
 
 object PasswordHealthAnalyzer {
@@ -45,8 +49,11 @@ object PasswordHealthAnalyzer {
         // Count password occurrences to detect reused passwords
         val passwordCounts = mutableMapOf<String, Int>()
         for (item in items) {
-            val count = passwordCounts.getOrDefault(item.password, 0)
-            passwordCounts[item.password] = count + 1
+            // An empty password is a missing/weak value, not reuse of a credential.
+            if (item.password.isNotEmpty()) {
+                val count = passwordCounts.getOrDefault(item.password, 0)
+                passwordCounts[item.password] = count + 1
+            }
         }
 
         var reused = 0
@@ -67,7 +74,7 @@ object PasswordHealthAnalyzer {
                 itemHasIssue = true
             }
 
-            if ((passwordCounts[item.password] ?: 0) > 1) {
+            if (item.password.isNotEmpty() && (passwordCounts[item.password] ?: 0) > 1) {
                 reused++
                 itemHasIssue = true
             }
