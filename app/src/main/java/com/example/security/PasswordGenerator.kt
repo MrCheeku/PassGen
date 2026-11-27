@@ -3,10 +3,10 @@ package com.example.security
 import java.security.SecureRandom
 
 object PasswordGenerator {
-    private val UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    private val LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
-    private val NUMBERS = "0123456789"
-    private val SYMBOLS = "!@#$%^&*()-_=+[]{}|;:,.<>?"
+    private const val UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    private const val LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
+    private const val NUMBERS = "0123456789"
+    private const val SYMBOLS = "!@#$%^&*()-_=+[]{}|;:,.<>?"
 
     private val secureRandom = SecureRandom()
 
@@ -19,47 +19,53 @@ object PasswordGenerator {
     )
 
     fun generate(options: GeneratorOptions): String {
-        val length = options.length.coerceIn(6, 64)
-        val charPool = StringBuilder()
-
-        val mandatoryChars = mutableListOf<Char>()
-
-        if (options.includeUppercase) {
-            charPool.append(UPPERCASE)
-            mandatoryChars.add(UPPERCASE[secureRandom.nextInt(UPPERCASE.length)])
-        }
-        if (options.includeLowercase) {
-            charPool.append(LOWERCASE)
-            mandatoryChars.add(LOWERCASE[secureRandom.nextInt(LOWERCASE.length)])
-        }
-        if (options.includeNumbers) {
-            charPool.append(NUMBERS)
-            mandatoryChars.add(NUMBERS[secureRandom.nextInt(NUMBERS.length)])
-        }
-        if (options.includeSymbols) {
-            charPool.append(SYMBOLS)
-            mandatoryChars.add(SYMBOLS[secureRandom.nextInt(SYMBOLS.length)])
+        require(options.length in 6..64) {
+            "Password length must be between 6 and 64 characters."
         }
 
-        // Fallback if user somehow deselected all
-        if (charPool.isEmpty()) {
-            charPool.append(LOWERCASE).append(NUMBERS)
-            mandatoryChars.add(LOWERCASE[secureRandom.nextInt(LOWERCASE.length)])
-        }
+        val characterPool = StringBuilder()
+        val requiredCharacters = mutableListOf<Char>()
 
-        val pool = charPool.toString()
-        val result = CharArray(length)
-
-        // Fill mandatory characters to guarantee each selected set is represented
-        val shuffledIndices = (0 until length).shuffled(kotlin.random.Random(secureRandom.nextLong()))
-        for (i in mandatoryChars.indices) {
-            if (i < length) {
-                result[shuffledIndices[i]] = mandatoryChars[i]
+        fun include(characters: String, enabled: Boolean) {
+            if (enabled) {
+                characterPool.append(characters)
+                requiredCharacters += characters[secureRandom.nextInt(characters.length)]
             }
         }
 
-        for (i in mandatoryChars.size until length) {
-            result[shuffledIndices[i]] = pool[secureRandom.nextInt(pool.length)]
+        include(UPPERCASE, options.includeUppercase)
+        include(LOWERCASE, options.includeLowercase)
+        include(NUMBERS, options.includeNumbers)
+        include(SYMBOLS, options.includeSymbols)
+
+        if (characterPool.isEmpty()) {
+            // An empty selection still produces a useful, secure password.
+            characterPool.append(LOWERCASE).append(NUMBERS)
+            requiredCharacters += LOWERCASE[secureRandom.nextInt(LOWERCASE.length)]
+        }
+
+        require(options.length >= requiredCharacters.size) {
+            "Password length is too short for the selected character groups."
+        }
+
+        val pool = characterPool.toString()
+        val result = CharArray(options.length)
+
+        // Guarantee at least one character from every enabled group.
+        requiredCharacters.forEachIndexed { index, character ->
+            result[index] = character
+        }
+
+        for (index in requiredCharacters.size until result.size) {
+            result[index] = pool[secureRandom.nextInt(pool.length)]
+        }
+
+        // Shuffle with SecureRandom instead of a separate non-cryptographic RNG.
+        for (index in result.lastIndex downTo 1) {
+            val swapIndex = secureRandom.nextInt(index + 1)
+            val current = result[index]
+            result[index] = result[swapIndex]
+            result[swapIndex] = current
         }
 
         return String(result)

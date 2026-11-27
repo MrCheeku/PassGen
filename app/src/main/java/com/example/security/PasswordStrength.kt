@@ -14,11 +14,16 @@ enum class StrengthLevel(val label: String, val color: Color, val score: Int) {
 data class StrengthResult(
     val level: StrengthLevel,
     val score: Int, // 0 to 4
-    val entropyBits: Double,
+    val entropyBits: Double, // Raw character-pool estimate, not a crack-time guarantee.
     val feedback: List<String>
 )
 
 object PasswordStrengthCalculator {
+    private val commonFragments = listOf(
+        "password", "qwerty", "letmein", "welcome", "admin", "iloveyou",
+        "123456", "123456789", "abc123"
+    )
+
     fun calculate(password: String): StrengthResult {
         if (password.isEmpty()) {
             return StrengthResult(
@@ -35,11 +40,11 @@ object PasswordStrengthCalculator {
         var hasDigit = false
         var hasSymbol = false
 
-        for (c in password) {
+        for (character in password) {
             when {
-                c.isLowerCase() -> hasLower = true
-                c.isUpperCase() -> hasUpper = true
-                c.isDigit() -> hasDigit = true
+                character.isLowerCase() -> hasLower = true
+                character.isUpperCase() -> hasUpper = true
+                character.isDigit() -> hasDigit = true
                 else -> hasSymbol = true
             }
         }
@@ -49,8 +54,10 @@ object PasswordStrengthCalculator {
         if (hasDigit) poolSize += 10
         if (hasSymbol) poolSize += 32
 
-        val entropy = if (poolSize > 0) password.length * log2(poolSize.toDouble()) else 0.0
+        val rawEntropy = if (poolSize > 0) password.length * log2(poolSize.toDouble()) else 0.0
         val feedback = mutableListOf<String>()
+        var adjustedEntropy = rawEntropy
+        val normalized = password.lowercase()
 
         if (password.length < 8) {
             feedback.add("Too short (minimum 8 characters)")
@@ -58,25 +65,55 @@ object PasswordStrengthCalculator {
             feedback.add("Consider increasing length to at least 14 characters")
         }
 
-        val charTypesCount = listOf(hasLower, hasUpper, hasDigit, hasSymbol).count { it }
-        if (charTypesCount < 3) {
+        val characterTypesCount = listOf(hasLower, hasUpper, hasDigit, hasSymbol).count { it }
+        if (characterTypesCount < 3) {
             feedback.add("Mix uppercase, lowercase, numbers, and symbols")
         }
 
-        // Determine level based on entropy and length
+        if (Regex("(.)\\1{2,}").containsMatchIn(password)) {
+            adjustedEntropy -= 20.0
+            feedback.add("Avoid long runs of the same character")
+        }
+
+        if (containsSequentialRun(normalized)) {
+            adjustedEntropy -= 15.0
+            feedback.add("Avoid predictable keyboard or sequential patterns")
+        }
+
+        if (commonFragments.any(normalized::contains)) {
+            adjustedEntropy = minOf(adjustedEntropy, 20.0)
+            feedback.add("Avoid common words and predictable password fragments")
+        }
+
+        adjustedEntropy = adjustedEntropy.coerceAtLeast(0.0)
+
         val level = when {
-            password.length < 6 || entropy < 25 -> StrengthLevel.VERY_WEAK
-            password.length < 9 || entropy < 45 -> StrengthLevel.WEAK
-            password.length < 12 || entropy < 65 -> StrengthLevel.FAIR
-            entropy < 85 -> StrengthLevel.STRONG
+            password.length < 6 || adjustedEntropy < 25 -> StrengthLevel.VERY_WEAK
+            password.length < 9 || adjustedEntropy < 45 -> StrengthLevel.WEAK
+            password.length < 12 || adjustedEntropy < 65 -> StrengthLevel.FAIR
+            adjustedEntropy < 85 -> StrengthLevel.STRONG
             else -> StrengthLevel.VERY_STRONG
         }
 
         return StrengthResult(
             level = level,
             score = level.score,
-            entropyBits = entropy,
+            entropyBits = rawEntropy,
             feedback = feedback
         )
+    }
+
+    private fun containsSequentialRun(value: String): Boolean {
+        if (value.length < 4) return false
+
+        var ascending = 1
+        var descending = 1
+        for (index in 1 until value.length) {
+            val difference = value[index].code - value[index - 1].code
+            ascending = if (difference == 1) ascending + 1 else 1
+            descending = if (difference == -1) descending + 1 else 1
+            if (ascending >= 4 || descending >= 4) return true
+        }
+        return false
     }
 }

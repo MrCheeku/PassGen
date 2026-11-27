@@ -216,18 +216,23 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         // Calculate reused passwords to accurately filter
         val passwordCounts = mutableMapOf<String, Int>()
         for (item in items) {
-            passwordCounts[item.password] = passwordCounts.getOrDefault(item.password, 0) + 1
+            if (item.password.isNotEmpty()) {
+                passwordCounts[item.password] = passwordCounts.getOrDefault(item.password, 0) + 1
+            }
         }
 
         val categoryFiltered = when (filter) {
             VaultFilter.ALL -> searchMatched
             VaultFilter.FAVORITES -> searchMatched.filter { it.isFavorite }
             VaultFilter.NEEDS_ATTENTION -> searchMatched.filter {
-                it.isWeak || it.isShort || it.isOld || (passwordCounts[it.password] ?: 0) > 1
+                it.isWeak || it.isShort || it.isOld ||
+                    (it.password.isNotEmpty() && (passwordCounts[it.password] ?: 0) > 1)
             }
             VaultFilter.WEAK -> searchMatched.filter { it.isWeak }
             VaultFilter.SHORT -> searchMatched.filter { it.isShort }
-            VaultFilter.REUSED -> searchMatched.filter { (passwordCounts[it.password] ?: 0) > 1 }
+            VaultFilter.REUSED -> searchMatched.filter {
+                it.password.isNotEmpty() && (passwordCounts[it.password] ?: 0) > 1
+            }
             VaultFilter.OLD -> searchMatched.filter { it.isOld }
         }
 
@@ -308,7 +313,15 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
                 isFavorite = isFavorite,
                 updatedAt = System.currentTimeMillis()
             )
-            repository.saveItem(item)
+            try {
+                repository.saveItem(item)
+            } catch (_: Exception) {
+                // Keep the editor open and never expose sensitive values or crypto details in UI.
+                _uiState.update {
+                    it.copy(statusMessage = "Could not securely save this credential. Your vault was not changed.")
+                }
+                return@launch
+            }
             _uiState.update {
                 it.copy(
                     isAddEditSheetOpen = false,
@@ -321,7 +334,13 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite(item: VaultItem) {
         viewModelScope.launch {
-            repository.toggleFavorite(item)
+            try {
+                repository.toggleFavorite(item)
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(statusMessage = "Could not securely update this credential. Your vault was not changed.")
+                }
+            }
         }
     }
 
